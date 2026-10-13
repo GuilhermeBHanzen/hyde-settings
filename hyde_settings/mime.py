@@ -13,11 +13,11 @@ FILE_TYPES = (
     ("Pasta", ("inode/directory",)),
 )
 
-_FIELD_CODES = re.compile(r"\s*%[fFuUdDnNickvm]")
+_FIELD_CODES = re.compile(r"%%|\s*%[fFuUdDnNickvm]")
 
 
 def strip_field_codes(cmdline):
-    return _FIELD_CODES.sub("", cmdline).replace("%%", "%").strip()
+    return _FIELD_CODES.sub(lambda m: "%" if m.group(0) == "%%" else "", cmdline).strip()
 
 
 def query_default(mime_type, runner=proc.run):

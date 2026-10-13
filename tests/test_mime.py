@@ -5,6 +5,7 @@ def test_strip_field_codes():
     assert mime.strip_field_codes("/usr/bin/code --unity-launch %F") == "/usr/bin/code --unity-launch"
     assert mime.strip_field_codes("dolphin %u") == "dolphin"
     assert mime.strip_field_codes("app --pct 100%%") == "app --pct 100%"
+    assert mime.strip_field_codes("app %%f") == "app %f"
 
 
 def test_query_default(fake_runner):
