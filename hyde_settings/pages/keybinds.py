@@ -205,6 +205,8 @@ class BindDialog(Adw.Dialog):
         return combo
 
     def _start_capture(self, *_args):
+        if self.capturing:
+            return
         err = self.app.hypr.enter_capture()
         if err:
             self.warning.set_label(f"Não foi possível pausar os atalhos: {err}")
