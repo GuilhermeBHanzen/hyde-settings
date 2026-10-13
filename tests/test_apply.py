@@ -134,8 +134,8 @@ def test_dangerous_apply_starts_watchdog_and_waits(fake_runner, paths):
     result = applier.apply(store.default_settings(), pending_with(kb_layout="us"))
     assert result == apply.Result(True, awaiting_confirm=True)
     start = next(c for c in runner.calls if c[0] == "systemd-run")
-    assert start == ["systemd-run", "--user", "--collect", "--unit=hyde-settings-revert", "/bin/hyde-settings",
-                     "--revert-after", "20", str(applier.backup_path), str(paths[0])]
+    assert start == ["systemd-run", "--user", "--collect", "--service-type=exec", "--unit=hyde-settings-revert",
+                     "/bin/hyde-settings", "--revert-after", "20", str(applier.backup_path), str(paths[0])]
     assert not paths[1].exists()  # saved only on keep()
 
 
@@ -150,8 +150,8 @@ def test_dangerous_apply_stops_old_watchdog_first(fake_runner, paths):
 def test_watchdog_start_failure_restores_and_fails(fake_runner, paths):
     ui_path, settings_path = paths
     runner = fake_runner()
-    runner.responses[("systemd-run", "--user", "--collect", "--unit=hyde-settings-revert", "/bin/hyde-settings",
-                      "--revert-after", "20", str(ui_path) + ".bak", str(ui_path))] = (None, "no user bus")
+    runner.responses[("systemd-run", "--user", "--collect", "--service-type=exec", "--unit=hyde-settings-revert",
+                      "/bin/hyde-settings", "--revert-after", "20", str(ui_path) + ".bak", str(ui_path))] = (None, "no user bus")
     hypr = FakeHypr()
     applier = apply.Applier(hypr, runner=runner, ui_path=ui_path, settings_path=settings_path,
                             launcher=["/bin/hyde-settings"], syntax_check=lambda _t: None)

@@ -109,7 +109,7 @@ class Applier:
     def _start_watchdog(self):
         self.stop_watchdog()
         _, err = self.run([
-            "systemd-run", "--user", "--collect", f"--unit={WATCHDOG_UNIT}", *self.launcher,
+            "systemd-run", "--user", "--collect", "--service-type=exec", f"--unit={WATCHDOG_UNIT}", *self.launcher,
             "--revert-after", str(REVERT_SECONDS + WATCHDOG_GRACE), str(self.backup_path), str(self.ui_path),
         ])
         return err
