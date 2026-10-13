@@ -17,3 +17,8 @@ def test_summary():
             "idle_inhibit": "fullscreen"}
     assert rules.summary(rule) == "classe ^(kitty)$ · opacidade 0.9/0.8 · flutua · não suspende em tela cheia"
     assert rules.summary({"name": "t", "match": {"title": "x"}, "float": False}) == "título x · não flutua"
+
+
+def test_summary_initial_title_and_idle_always():
+    rule = {"name": "s", "match": {"initial_title": "Spotify"}, "idle_inhibit": "always"}
+    assert rules.summary(rule) == "título inicial Spotify · não suspende"

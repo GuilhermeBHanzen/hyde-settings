@@ -81,6 +81,7 @@ class RuleDialog(Adw.Dialog):
         all_rules = app.pending["window_rules"]
         rule = all_rules[index] if index is not None else {"name": "", "match": {}}
         self.taken = {r["name"] for i, r in enumerate(all_rules) if i != index}
+        self.original_match = dict(rule["match"])
 
         group = Adw.PreferencesGroup()
         self.name = Adw.EntryRow(title="Nome", text=rule["name"])
@@ -156,10 +157,16 @@ class RuleDialog(Adw.Dialog):
         return popover
 
     def _save(self, *_args):
-        match = {key: row.get_text().strip() for key, row in (("class", self.window_class), ("title", self.title_match))}
+        match = dict(self.original_match)
+        for key, row in (("class", self.window_class), ("title", self.title_match)):
+            text = row.get_text().strip()
+            if text:
+                match[key] = text
+            else:
+                match.pop(key, None)
         rule = {
             "name": self.name.get_text().strip(),
-            "match": {k: v for k, v in match.items() if v},
+            "match": match,
             "opacity": [round(s.get_value(), 2) for s in self.opacity_rows] if self.use_opacity.get_active() else None,
             "float": FLOAT_VALUES[self.float_row.get_selected()],
             "idle_inhibit": IDLE_VALUES[self.idle_row.get_selected()],
