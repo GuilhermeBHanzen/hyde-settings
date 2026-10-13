@@ -252,6 +252,11 @@ class BindDialog(Adw.Dialog):
         combo = self._check()
         if combo is None:
             return
+        # HyDE's own binds may spell the key differently (e.g. LEFT vs Left); store the live spelling
+        # so the override matches the bind it replaces.
+        clashes = [r for r in binds.conflicts(combo, self.rows, editing=self.row) if r.origin != "yours"]
+        if clashes:
+            combo = clashes[0].combo
         name = self._dispatch_name()
         if name is None:
             command = self.command.get_text().strip()
