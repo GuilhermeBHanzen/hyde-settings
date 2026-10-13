@@ -90,10 +90,18 @@ class KeybindsPage(Page):
         BindDialog(self.app, self.rows, row, self._save, self._remove).present(self.app.window)
 
     def _save(self, row, entry):
+        pending = self.app.pending["binds"]
         if row is not None and row.bind_index is not None:
-            self.app.pending["binds"][row.bind_index] = entry
+            pending[row.bind_index] = entry
         else:
-            self.app.pending["binds"].append(entry)
+            # A pending unbind on the same combo (from removing a row) is replaced, not stacked under the new bind.
+            cid = model.combo_id(entry["key"])
+            index = next((i for i, b in enumerate(pending)
+                          if b["action"]["type"] == "unbind" and model.combo_id(b["key"]) == cid), None)
+            if index is not None:
+                pending[index] = entry
+            else:
+                pending.append(entry)
         self.changed()
         self.refresh()
 
