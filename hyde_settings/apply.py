@@ -59,6 +59,7 @@ class Applier:
         return self.ui_path.with_name(self.ui_path.name + ".bak")
 
     def apply(self, saved, pending):
+        self.stop_watchdog()
         errors = store.validate(pending)
         if errors:
             return Result(False, "\n".join(errors))

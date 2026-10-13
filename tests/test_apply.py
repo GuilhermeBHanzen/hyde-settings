@@ -50,6 +50,12 @@ def test_successful_apply_writes_lua_and_saves(fake_runner, paths):
     assert not any(c[0] == "systemd-run" for c in runner.calls)
 
 
+def test_every_apply_stops_watchdog_first(fake_runner, paths):
+    applier, runner = make(fake_runner, FakeHypr(), paths)
+    applier.apply(store.default_settings(), pending_with(sensitivity=0.5))
+    assert runner.calls[0] == ["systemctl", "--user", "stop", "hyde-settings-revert.service"]
+
+
 def test_invalid_settings_write_nothing(fake_runner, paths):
     applier, _ = make(fake_runner, FakeHypr(), paths)
     result = applier.apply(store.default_settings(), pending_with(sensitivity=5))
