@@ -56,7 +56,7 @@ def scan_manual(paths):
     ids = set()
     for path in paths:
         try:
-            text = Path(path).read_text()
+            text = Path(path).read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
         for line in text.splitlines():
@@ -117,6 +117,8 @@ def combo_from_gtk(keyval_name, mods):
     """keyval_name: Gdk.keyval_name of the unshifted key; mods: model.MODS names held.
 
     Bare modifier presses return None so capture keeps waiting for the real key.
+    Bare Escape is the caller's cancel key and must be handled before calling;
+    this function does not special-case it, so SUPER + Escape stays capturable.
     """
     if not keyval_name or keyval_name in MODIFIER_KEYS:
         return None

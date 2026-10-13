@@ -46,6 +46,12 @@ def test_scan_manual_skips_comments_and_bad_combos(tmp_path):
     assert binds.scan_manual([f, tmp_path / "missing.lua"]) == {(64, "k")}
 
 
+def test_scan_manual_tolerates_non_utf8_bytes(tmp_path):
+    f = tmp_path / "legacy.lua"
+    f.write_bytes(b'hl.bind("SUPER + K", x)\n\xff\n')
+    assert binds.scan_manual([f]) == {(64, "k")}
+
+
 def test_manual_files_excludes_generated_ui(tmp_path):
     for name in ("hyprland.lua", "ui.lua", "legacy.lua", "notes.txt"):
         (tmp_path / name).write_text("")
@@ -82,6 +88,13 @@ def test_combo_from_gtk():
     assert binds.combo_from_gtk("q", {"SUPER"}) == "SUPER + Q"
     assert binds.combo_from_gtk("1", {"SHIFT", "SUPER"}) == "SUPER + SHIFT + 1"
     assert binds.combo_from_gtk("F10", set()) == "F10"
+
+
+def test_combo_from_gtk_escape_is_plain_key_for_caller_to_handle():
+    # Bare Escape is the dialog's cancel key, handled by the caller before this call.
+    # SUPER + Escape must stay capturable.
+    assert binds.combo_from_gtk("Escape", set()) == "Escape"
+    assert binds.combo_from_gtk("Escape", {"SUPER"}) == "SUPER + Escape"
 
 
 def test_combo_from_gtk_ignores_bare_modifiers():
