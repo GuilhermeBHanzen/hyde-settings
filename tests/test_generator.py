@@ -99,6 +99,14 @@ def test_window_and_layer_rules():
     assert 'hl.layer_rule({ name = "hs-blur", match = { namespace = "^(rofi)$" }, blur = true, ignore_alpha = 0 })\n' in text
 
 
+def test_empty_match_fields_are_not_emitted():
+    s = store.default_settings()
+    s["window_rules"] = [{"name": "t", "match": {"class": "", "title": "x"}, "float": True}]
+    text = generator.generate(s)
+    assert 'match = { title = "x" }' in text
+    assert "class =" not in text
+
+
 def test_section_order_and_determinism(tmp_path):
     s = store.default_settings()
     s["monitors"] = [{"output": "eDP-1", "mode": "preferred", "position": "auto", "scale": 1.25}]

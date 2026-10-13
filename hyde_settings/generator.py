@@ -149,7 +149,7 @@ def _binds_section(binds):
 def _window_rules_section(rules):
     out = ""
     for rule in rules:
-        match = {key: rule["match"].get(key) for key in ("class", "title", "initial_title")}
+        match = {key: rule["match"][key] for key in ("class", "title", "initial_title") if rule["match"].get(key)}
         idle = rule.get("idle_inhibit")
         if idle == "fullscreen":
             match["fullscreen"] = True
