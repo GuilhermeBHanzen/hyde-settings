@@ -6,9 +6,12 @@ from hyde_settings import apply, generator, store
 
 
 class FakeHypr:
-    def __init__(self, reload_error=None, errors=None):
+    """errors_sequence, when given, is returned call by call; after it runs out, `errors` is returned."""
+
+    def __init__(self, reload_error=None, errors=None, errors_sequence=None):
         self.reload_error = reload_error
         self.errors = list(errors or [])
+        self.errors_sequence = [list(e) for e in (errors_sequence or [])]
         self.reloads = 0
 
     def reload(self):
@@ -16,6 +19,8 @@ class FakeHypr:
         return self.reload_error
 
     def config_errors(self):
+        if self.errors_sequence:
+            return self.errors_sequence.pop(0)
         return self.errors
 
 
@@ -91,13 +96,21 @@ def test_backup_is_last_confirmed_settings(fake_runner, paths):
 def test_config_errors_roll_back_and_keep_settings_unsaved(fake_runner, paths):
     paths[0].parent.mkdir(parents=True)
     paths[0].write_text("-- previous\n")
-    hypr = FakeHypr(errors=["ui.lua:5: bad rule"])
+    hypr = FakeHypr(errors_sequence=[[], ["ui.lua:5: bad rule"]])  # clean baseline, then the new error
     applier, _ = make(fake_runner, hypr, paths)
     result = applier.apply(store.default_settings(), pending_with(sensitivity=0.5))
     assert not result.ok and "bad rule" in result.error
     assert paths[0].read_text() == generator.generate(store.default_settings())
     assert hypr.reloads == 2  # the failing reload, then the reload of the restored file
     assert not paths[1].exists()
+
+
+def test_preexisting_config_error_does_not_block_apply(fake_runner, paths):
+    hypr = FakeHypr(errors_sequence=[["legacy.lua:1: old"], ["legacy.lua:1: old"]])
+    applier, _ = make(fake_runner, hypr, paths)
+    pending = pending_with(sensitivity=0.5)
+    assert applier.apply(store.default_settings(), pending) == apply.Result(True)
+    assert store.load(paths[1])[0] == pending
 
 
 def test_rollback_without_previous_file_restores_last_confirmed(fake_runner, paths):

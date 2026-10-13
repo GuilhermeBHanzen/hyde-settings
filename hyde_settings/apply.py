@@ -66,6 +66,7 @@ class Applier:
         err = self.syntax_check(text)
         if err:
             return Result(False, f"Lua gerado inválido: {err}")
+        baseline = set(self.hypr.config_errors())  # errors that predate this apply are not ours to block on
         self.stop_watchdog()
         self._backup(saved)
         store.write_atomic(self.ui_path, text)
@@ -76,7 +77,7 @@ class Applier:
                 self._restore()
                 return Result(False, f"não foi possível iniciar a reversão automática: {err}")
         failure = self.hypr.reload()
-        errors = [] if failure else self.hypr.config_errors()
+        errors = [] if failure else [e for e in self.hypr.config_errors() if e not in baseline]
         if failure or errors:
             if dangerous:
                 self.stop_watchdog()
