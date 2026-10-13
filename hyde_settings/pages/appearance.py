@@ -77,9 +77,11 @@ class AppearancePage(Page):
             for row, path, option in self.spins:
                 live = hypr.option(option)
                 mine = self._get(path)
+                shown = "?" if live is None else live
                 row.set_value(mine if mine is not None else (live or 0))
-                row.set_subtitle(f"Atual: {live}" + (" · seu valor" if mine is not None else " · padrão do HyDE"))
+                row.set_subtitle(f"Atual: {shown}" + (" · seu valor" if mine is not None else " · padrão do HyDE"))
             mine = self._get(("blur", "enabled"))
             live = hypr.option("decoration:blur:enabled")
+            shown = "?" if live is None else live
             self.blur.set_active(mine if mine is not None else bool(live))
-            self.blur.set_subtitle("seu valor" if mine is not None else "padrão do HyDE")
+            self.blur.set_subtitle(f"Atual: {shown}" + (" · seu valor" if mine is not None else " · padrão do HyDE"))
