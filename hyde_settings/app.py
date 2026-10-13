@@ -24,13 +24,14 @@ except (ImportError, ValueError):
 
 APP_ID = "org.local.HydeSettings"
 
+from hyde_settings.pages.appearance import AppearancePage  # noqa: E402
 from hyde_settings.pages.apps import AppsPage  # noqa: E402
 from hyde_settings.pages.display import DisplayPage  # noqa: E402
 from hyde_settings.pages.keybinds import KeybindsPage  # noqa: E402
 from hyde_settings.pages.rules import RulesPage  # noqa: E402
 
 # Page classes in sidebar order; each page task registers its class here.
-PAGES = [KeybindsPage, AppsPage, DisplayPage, RulesPage]
+PAGES = [KeybindsPage, AppsPage, DisplayPage, RulesPage, AppearancePage]
 
 
 class HydeSettings(Adw.Application):
