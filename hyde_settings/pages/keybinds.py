@@ -69,7 +69,7 @@ class KeybindsPage(Page):
             group.set_visible(group in visible)
 
     def _row_widget(self, row):
-        widget = Adw.ActionRow(title=row.combo, subtitle=row.label)
+        widget = Adw.ActionRow(title=row.combo, subtitle=row.label, use_markup=False)
         widget.add_suffix(ui.tag(ORIGIN_LABELS[row.origin]))
         if row.origin == "manual":
             widget.set_tooltip_text("Definido à mão em ~/.config/hypr — edite o arquivo")

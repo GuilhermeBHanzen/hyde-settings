@@ -41,13 +41,13 @@ class RulesPage(Page):
             self.layer_group.remove(widget)
         self.rule_widgets, self.layer_widgets = [], []
         for index, rule in enumerate(self.app.pending["window_rules"]):
-            row = Adw.ActionRow(title=rule["name"], subtitle=rules.summary(rule))
+            row = Adw.ActionRow(title=rule["name"], subtitle=rules.summary(rule), use_markup=False)
             row.add_suffix(ui.flat_icon_button("document-edit-symbolic", "Editar", lambda i=index: self._edit(i)))
             row.add_suffix(ui.flat_icon_button("user-trash-symbolic", "Apagar", lambda i=index: self._delete(i)))
             self.list_group.add(row)
             self.rule_widgets.append(row)
         for rule in self.app.pending["layer_rules"]:
-            row = Adw.ActionRow(title=rule["name"], subtitle=rule["match"]["namespace"])
+            row = Adw.ActionRow(title=rule["name"], subtitle=rule["match"]["namespace"], use_markup=False)
             self.layer_group.add(row)
             self.layer_widgets.append(row)
         self.filter(self.query)

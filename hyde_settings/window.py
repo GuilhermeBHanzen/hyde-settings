@@ -44,6 +44,7 @@ class MainWindow(Adw.ApplicationWindow):
         header.pack_end(self.discard_button)
 
         self.banner = Adw.Banner()
+        self.banner.set_use_markup(False)
         self.banner.connect("button-clicked", lambda *_args: app.add_require())
         self.toasts = Adw.ToastOverlay(child=self.stack, vexpand=True)
         body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -94,6 +95,7 @@ class MainWindow(Adw.ApplicationWindow):
 
     def toast(self, text, undo=None):
         toast = Adw.Toast(title=text, timeout=4)
+        toast.set_use_markup(False)
         if undo is not None:
             toast.set_button_label("Desfazer")
             toast.connect("button-clicked", lambda *_args: undo())
