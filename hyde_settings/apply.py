@@ -12,6 +12,7 @@ from hyde_settings import generator, proc, store
 
 WATCHDOG_UNIT = "hyde-settings-revert"
 REVERT_SECONDS = 15
+WATCHDOG_GRACE = 5  # the UI countdown (REVERT_SECONDS) always decides first; the watchdog is a backstop
 
 
 def ui_lua_path():
@@ -88,8 +89,13 @@ class Applier:
         return Result(True)
 
     def keep(self, pending):
+        """Confirm a dangerous apply. Refuses to save if the watchdog already reverted ui.lua."""
+        out, err = self.run(["systemctl", "--user", "is-active", f"{WATCHDOG_UNIT}.service"])
+        if err or (out or "").strip() != "active":
+            return "A reversão automática já aconteceu; aplique de novo."
         self.stop_watchdog()
         store.save(pending, self.settings_path)
+        return None
 
     def revert(self):
         self.stop_watchdog()
@@ -103,7 +109,7 @@ class Applier:
         self.stop_watchdog()
         _, err = self.run([
             "systemd-run", "--user", "--collect", f"--unit={WATCHDOG_UNIT}", *self.launcher,
-            "--revert-after", str(REVERT_SECONDS), str(self.backup_path), str(self.ui_path),
+            "--revert-after", str(REVERT_SECONDS + WATCHDOG_GRACE), str(self.backup_path), str(self.ui_path),
         ])
         return err
 

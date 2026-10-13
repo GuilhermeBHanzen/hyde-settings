@@ -100,7 +100,11 @@ class HydeSettings(Adw.Application):
         self._committed("Configurações aplicadas")
 
     def _keep(self):
-        self.applier.keep(self.pending)
+        err = self.applier.keep(self.pending)
+        if err:
+            self.window.error("Não foi possível manter", err)
+            self.refresh()
+            return
         self._committed("Configurações mantidas")
 
     def _revert(self):

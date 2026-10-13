@@ -122,7 +122,7 @@ def test_dangerous_apply_starts_watchdog_and_waits(fake_runner, paths):
     assert result == apply.Result(True, awaiting_confirm=True)
     start = next(c for c in runner.calls if c[0] == "systemd-run")
     assert start == ["systemd-run", "--user", "--collect", "--unit=hyde-settings-revert", "/bin/hyde-settings",
-                     "--revert-after", "15", str(applier.backup_path), str(paths[0])]
+                     "--revert-after", "20", str(applier.backup_path), str(paths[0])]
     assert not paths[1].exists()  # saved only on keep()
 
 
@@ -138,7 +138,7 @@ def test_watchdog_start_failure_restores_and_fails(fake_runner, paths):
     ui_path, settings_path = paths
     runner = fake_runner()
     runner.responses[("systemd-run", "--user", "--collect", "--unit=hyde-settings-revert", "/bin/hyde-settings",
-                      "--revert-after", "15", str(ui_path) + ".bak", str(ui_path))] = (None, "no user bus")
+                      "--revert-after", "20", str(ui_path) + ".bak", str(ui_path))] = (None, "no user bus")
     hypr = FakeHypr()
     applier = apply.Applier(hypr, runner=runner, ui_path=ui_path, settings_path=settings_path,
                             launcher=["/bin/hyde-settings"], syntax_check=lambda _t: None)
@@ -153,9 +153,23 @@ def test_keep_stops_watchdog_and_saves(fake_runner, paths):
     pending = pending_with(kb_layout="us")
     applier.apply(store.default_settings(), pending)
     runner.calls.clear()
-    applier.keep(pending)
-    assert runner.calls == [["systemctl", "--user", "stop", "hyde-settings-revert.service"]]
+    runner.responses[("systemctl", "--user", "is-active", "hyde-settings-revert.service")] = ("active\n", None)
+    assert applier.keep(pending) is None
+    assert runner.calls == [
+        ["systemctl", "--user", "is-active", "hyde-settings-revert.service"],
+        ["systemctl", "--user", "stop", "hyde-settings-revert.service"],
+    ]
     assert store.load(paths[1])[0] == pending
+
+
+def test_keep_after_watchdog_fired_does_not_save(fake_runner, paths):
+    applier, runner = make(fake_runner, FakeHypr(), paths)
+    pending = pending_with(kb_layout="us")
+    applier.apply(store.default_settings(), pending)
+    runner.responses[("systemctl", "--user", "is-active", "hyde-settings-revert.service")] = (None, "inactive")
+    err = applier.keep(pending)
+    assert err == "A reversão automática já aconteceu; aplique de novo."
+    assert not paths[1].exists()
 
 
 def test_revert_restores_backup(fake_runner, paths):
