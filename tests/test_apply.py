@@ -57,17 +57,35 @@ def test_every_apply_stops_watchdog_first(fake_runner, paths):
 
 
 def test_invalid_settings_write_nothing(fake_runner, paths):
-    applier, _ = make(fake_runner, FakeHypr(), paths)
+    applier, runner = make(fake_runner, FakeHypr(), paths)
     result = applier.apply(store.default_settings(), pending_with(sensitivity=5))
     assert not result.ok and "sensibilidade" in result.error
     assert not paths[0].exists()
+    assert runner.calls == []
+
+
+def test_invalid_apply_leaves_watchdog_alone(fake_runner, paths):
+    applier, runner = make(fake_runner, FakeHypr(), paths)
+    result = applier.apply(store.default_settings(), pending_with(sensitivity=5))
+    assert not result.ok
+    assert runner.calls == []
 
 
 def test_luac_failure_writes_nothing(fake_runner, paths):
-    applier, _ = make(fake_runner, FakeHypr(), paths, syntax_error="ui.lua:1: unexpected symbol")
+    applier, runner = make(fake_runner, FakeHypr(), paths, syntax_error="ui.lua:1: unexpected symbol")
     result = applier.apply(store.default_settings(), pending_with(sensitivity=0.5))
     assert not result.ok and "unexpected symbol" in result.error
     assert not paths[0].exists()
+    assert runner.calls == []
+
+
+def test_backup_is_last_confirmed_settings(fake_runner, paths):
+    paths[0].parent.mkdir(parents=True)
+    paths[0].write_text("-- unconfirmed dangerous state\n")
+    applier, _ = make(fake_runner, FakeHypr(), paths)
+    saved = store.default_settings()
+    applier.apply(saved, pending_with(kb_layout="us"))
+    assert applier.backup_path.read_text() == generator.generate(saved)
 
 
 def test_config_errors_roll_back_and_keep_settings_unsaved(fake_runner, paths):
@@ -77,16 +95,16 @@ def test_config_errors_roll_back_and_keep_settings_unsaved(fake_runner, paths):
     applier, _ = make(fake_runner, hypr, paths)
     result = applier.apply(store.default_settings(), pending_with(sensitivity=0.5))
     assert not result.ok and "bad rule" in result.error
-    assert paths[0].read_text() == "-- previous\n"
+    assert paths[0].read_text() == generator.generate(store.default_settings())
     assert hypr.reloads == 2  # the failing reload, then the reload of the restored file
     assert not paths[1].exists()
 
 
-def test_rollback_without_previous_file_restores_empty_config(fake_runner, paths):
+def test_rollback_without_previous_file_restores_last_confirmed(fake_runner, paths):
     applier, _ = make(fake_runner, FakeHypr(reload_error="no socket"), paths)
     result = applier.apply(store.default_settings(), pending_with(sensitivity=0.5))
     assert not result.ok
-    assert paths[0].read_text() == generator.HEADER
+    assert paths[0].read_text() == generator.generate(store.default_settings())
 
 
 def test_is_dangerous():
@@ -126,7 +144,7 @@ def test_watchdog_start_failure_restores_and_fails(fake_runner, paths):
                             launcher=["/bin/hyde-settings"], syntax_check=lambda _t: None)
     result = applier.apply(store.default_settings(), pending_with(kb_layout="us"))
     assert not result.ok and "no user bus" in result.error
-    assert ui_path.read_text() == generator.HEADER
+    assert ui_path.read_text() == generator.generate(store.default_settings())
     assert hypr.reloads == 0
 
 
@@ -146,7 +164,7 @@ def test_revert_restores_backup(fake_runner, paths):
     applier, _ = make(fake_runner, FakeHypr(), paths)
     applier.apply(store.default_settings(), pending_with(kb_layout="us"))
     assert applier.revert() is None
-    assert paths[0].read_text() == "-- previous\n"
+    assert paths[0].read_text() == generator.generate(store.default_settings())
 
 
 def test_revert_after_entry_point(tmp_path):

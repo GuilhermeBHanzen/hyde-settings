@@ -3,7 +3,6 @@
 Dangerous changes (monitors, keyboard layout) start a detached watchdog that restores the
 previous ui.lua after REVERT_SECONDS unless the user confirms; it survives the app dying.
 """
-import shutil
 import tempfile
 import time
 from dataclasses import dataclass
@@ -59,7 +58,6 @@ class Applier:
         return self.ui_path.with_name(self.ui_path.name + ".bak")
 
     def apply(self, saved, pending):
-        self.stop_watchdog()
         errors = store.validate(pending)
         if errors:
             return Result(False, "\n".join(errors))
@@ -67,7 +65,8 @@ class Applier:
         err = self.syntax_check(text)
         if err:
             return Result(False, f"Lua gerado inválido: {err}")
-        self._backup()
+        self.stop_watchdog()
+        self._backup(saved)
         store.write_atomic(self.ui_path, text)
         dangerous = is_dangerous(saved, pending)
         if dangerous:
@@ -108,11 +107,9 @@ class Applier:
         ])
         return err
 
-    def _backup(self):
-        if self.ui_path.exists():
-            shutil.copy2(self.ui_path, self.backup_path)
-        else:
-            store.write_atomic(self.backup_path, generator.HEADER)
+    def _backup(self, saved):
+        """Backup is always the last confirmed settings, never the current (maybe unconfirmed) ui.lua."""
+        store.write_atomic(self.backup_path, generator.generate(saved))
 
     def _restore(self):
         store.write_atomic(self.ui_path, self.backup_path.read_text())
