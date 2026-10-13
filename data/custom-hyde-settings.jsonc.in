@@ -1,0 +1,8 @@
+{
+    "custom/hyde-settings": {
+        "format": "",
+        "tooltip": true,
+        "tooltip-format": "HyDE Settings",
+        "on-click": "uwsm app -- @BIN@"
+    }
+}

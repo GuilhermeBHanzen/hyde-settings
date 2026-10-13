@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=HyDE Settings
+Comment=Atalhos, apps padrão, monitor, regras de janela e aparência
+Exec=@BIN@
+Icon=preferences-system
+Terminal=false
+Categories=Settings;DesktopSettings;
+StartupWMClass=org.local.HydeSettings
