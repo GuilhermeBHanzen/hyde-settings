@@ -149,6 +149,8 @@ def test_dangerous_apply_stops_old_watchdog_first(fake_runner, paths):
 
 def test_watchdog_start_failure_restores_and_fails(fake_runner, paths):
     ui_path, settings_path = paths
+    ui_path.parent.mkdir(parents=True)
+    ui_path.write_text("-- previous\n")
     runner = fake_runner()
     runner.responses[("systemd-run", "--user", "--collect", "--service-type=exec", "--unit=hyde-settings-revert",
                       "/bin/hyde-settings", "--revert-after", "20", str(ui_path) + ".bak", str(ui_path))] = (None, "no user bus")
@@ -157,7 +159,7 @@ def test_watchdog_start_failure_restores_and_fails(fake_runner, paths):
                             launcher=["/bin/hyde-settings"], syntax_check=lambda _t: None)
     result = applier.apply(store.default_settings(), pending_with(kb_layout="us"))
     assert not result.ok and "no user bus" in result.error
-    assert ui_path.read_text() == generator.generate(store.default_settings())
+    assert ui_path.read_text() == "-- previous\n"  # ui.lua is never written when the watchdog cannot start
     assert hypr.reloads == 0
 
 

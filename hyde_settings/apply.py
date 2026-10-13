@@ -69,13 +69,13 @@ class Applier:
         baseline = set(self.hypr.config_errors())  # errors that predate this apply are not ours to block on
         self.stop_watchdog()
         self._backup(saved)
-        store.write_atomic(self.ui_path, text)
         dangerous = is_dangerous(saved, pending)
         if dangerous:
+            # The watchdog must exist before ui.lua changes; if it cannot start, ui.lua is never touched.
             err = self._start_watchdog()
             if err:
-                self._restore()
                 return Result(False, f"não foi possível iniciar a reversão automática: {err}")
+        store.write_atomic(self.ui_path, text)
         failure = self.hypr.reload()
         errors = [] if failure else [e for e in self.hypr.config_errors() if e not in baseline]
         if failure or errors:
