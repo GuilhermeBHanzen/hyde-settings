@@ -90,7 +90,9 @@ class AppsPage(Page):
             return
 
         def undo():
-            mime.set_default(previous, row.mime_types)
+            err = mime.set_default(previous, row.mime_types)
+            if err:
+                self.app.window.toast(f"xdg-mime falhou ao desfazer: {err}")
             self.refresh()
 
         self.app.window.toast(f"{row.get_title()}: {name}", undo=undo if previous else None)
