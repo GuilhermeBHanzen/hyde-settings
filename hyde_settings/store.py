@@ -60,6 +60,38 @@ def _is_num(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
+def _obj(errors, label, value):
+    """Optional nested object: None counts as absent, any other non-object is reported."""
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        errors.append(f"{label}: esperado objeto")
+        return {}
+    return value
+
+
+def _section(errors, name, value):
+    """Top-level object section: a hand-edited null or non-object is reported, never used."""
+    if not isinstance(value, dict):
+        errors.append(f"{name}: esperado objeto")
+        return {}
+    return value
+
+
+def _items(errors, name, value, item_label):
+    """Top-level list section: returns (number, dict) for object items and reports the rest."""
+    if not isinstance(value, list):
+        errors.append(f"{name}: esperado lista")
+        return []
+    items = []
+    for i, item in enumerate(value):
+        if isinstance(item, dict):
+            items.append((i + 1, item))
+        else:
+            errors.append(f"{item_label} {i + 1}: esperado objeto")
+    return items
+
+
 def _check_range(errors, label, value, lo, hi, integer=False):
     if value is None:
         return
@@ -99,7 +131,7 @@ def window_rule_errors(rule, taken_names):
         errors.append(f"{label}: nome inválido (use letras, números, - e _)")
     elif name in taken_names:
         errors.append(f"{label}: nome repetido")
-    match = rule.get("match") or {}
+    match = _obj(errors, f"{label}: match", rule.get("match"))
     fields = {k: match.get(k) for k in _MATCH_KEYS if match.get(k)}
     if not fields:
         errors.append(f"{label}: informe classe, título ou título inicial")
@@ -123,8 +155,8 @@ def validate(settings):
     if settings.get("version") != VERSION:
         return [f"versão de configuração desconhecida: {settings.get('version')!r}"]
     errors = []
-    for i, mon in enumerate(settings["monitors"]):
-        label = f"monitor {i + 1}"
+    for number, mon in _items(errors, "monitores", settings.get("monitors"), "monitor"):
+        label = f"monitor {number}"
         if not isinstance(mon.get("output"), str) or not mon["output"]:
             errors.append(f"{label}: saída vazia")
         mode = mon.get("mode")
@@ -136,7 +168,7 @@ def validate(settings):
         scale = mon.get("scale")
         if not _is_num(scale) or not 0.25 <= scale <= 4:
             errors.append(f"{label}: escala inválida {scale!r} (esperado 0.25–4)")
-    inp = settings["input"]
+    inp = _section(errors, "entrada", settings.get("input"))
     for key in ("kb_layout", "kb_variant"):
         value = inp.get(key)
         if value is not None and (not isinstance(value, str) or not value.strip() or " " in value):
@@ -144,14 +176,14 @@ def validate(settings):
     _check_range(errors, "entrada.sensibilidade", inp.get("sensitivity"), -1.0, 1.0)
     _check_bool(errors, "entrada.numlock", inp.get("numlock_by_default"))
     _check_bool(errors, "entrada.scroll natural", inp.get("natural_scroll"))
-    app = settings["appearance"]
+    app = _section(errors, "aparência", settings.get("appearance"))
     _check_range(errors, "aparência.opacidade ativa", app.get("active_opacity"), 0.0, 1.0)
     _check_range(errors, "aparência.opacidade inativa", app.get("inactive_opacity"), 0.0, 1.0)
     _check_range(errors, "aparência.espaço entre janelas", app.get("gaps_in"), 0, 100, integer=True)
     _check_range(errors, "aparência.margem", app.get("gaps_out"), 0, 200, integer=True)
     _check_range(errors, "aparência.borda", app.get("border_size"), 0, 20, integer=True)
     _check_range(errors, "aparência.arredondamento", app.get("rounding"), 0, 50, integer=True)
-    blur = app.get("blur") or {}
+    blur = _obj(errors, "aparência.blur", app.get("blur"))
     _check_bool(errors, "aparência.blur", blur.get("enabled"))
     _check_range(errors, "aparência.blur tamanho", blur.get("size"), 1, 50, integer=True)
     _check_range(errors, "aparência.blur passes", blur.get("passes"), 1, 10, integer=True)
@@ -167,28 +199,30 @@ def validate(settings):
         else:
             used[cid] = owner
 
+    apps = _section(errors, "apps", settings.get("apps"))
     for role in model.ROLES:
-        entry = settings["apps"].get(role) or {}
+        entry = _obj(errors, f"apps.{role}", apps.get(role))
         command = entry.get("command")
         if command is not None and (not isinstance(command, str) or not command.strip()):
             errors.append(f"apps.{role}: comando vazio")
         combo = _check_combo(errors, f"apps.{role}", entry.get("key"))
         if command:
             claim(combo, f"app {role}")
-    for i, bind in enumerate(settings["binds"]):
-        label = f"atalho {i + 1}"
+    for number, bind in _items(errors, "atalhos", settings.get("binds"), "atalho"):
+        label = f"atalho {number}"
         combo = _check_combo(errors, label, bind.get("key"))
-        action = bind.get("action") or {}
+        action = _obj(errors, f"{label}: ação", bind.get("action"))
         kind = action.get("type")
         if kind == "exec":
             if not isinstance(action.get("command"), str) or not action["command"].strip():
                 errors.append(f"{label}: comando vazio")
         elif kind == "dispatch":
             name = action.get("name")
-            if name not in model.DISPATCHERS:
+            if not isinstance(name, str) or name not in model.DISPATCHERS:
                 errors.append(f"{label}: ação desconhecida {name!r}")
             elif model.DISPATCHERS[name]:
-                n = (action.get("args") or {}).get("n")
+                args = _obj(errors, f"{label}: argumentos", action.get("args"))
+                n = args.get("n")
                 if not isinstance(n, int) or isinstance(n, bool) or not 1 <= n <= 99:
                     errors.append(f"{label}: número de workspace inválido {n!r}")
         elif kind != "unbind":
@@ -197,18 +231,20 @@ def validate(settings):
             errors.append(f"{label}: descrição inválida")
         claim(combo, label)
     names = set()
-    for rule in settings["window_rules"]:
+    for _, rule in _items(errors, "regras de janela", settings.get("window_rules"), "regra de janela"):
         errors.extend(window_rule_errors(rule, names))
         if isinstance(rule.get("name"), str):
             names.add(rule["name"])
     layer_names = set()
-    for rule in settings["layer_rules"]:
+    for _, rule in _items(errors, "regras de camada", settings.get("layer_rules"), "regra de camada"):
         name = rule.get("name")
         label = f"regra de camada {name or '(sem nome)'}"
         if not isinstance(name, str) or not _NAME_RE.match(name) or name in layer_names:
             errors.append(f"{label}: nome inválido ou repetido")
-        layer_names.add(name)
-        _check_regex(errors, f"{label}: namespace", (rule.get("match") or {}).get("namespace"))
+        if isinstance(name, str):
+            layer_names.add(name)
+        match = _obj(errors, f"{label}: match", rule.get("match"))
+        _check_regex(errors, f"{label}: namespace", match.get("namespace"))
         _check_bool(errors, f"{label}: blur", rule.get("blur"))
         _check_range(errors, f"{label}: ignore_alpha", rule.get("ignore_alpha"), 0, 1)
     return errors
@@ -218,14 +254,16 @@ def load(path=None):
     """Return (settings, error). A non-None error means the caller must stay read-only."""
     path = Path(path) if path else settings_path()
     try:
-        raw = path.read_text()
+        raw = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return default_settings(), None
+    except UnicodeDecodeError as exc:
+        return default_settings(), f"{path}: UTF-8 inválido ({exc})"
     except OSError as exc:
         return default_settings(), f"{path}: {exc}"
     try:
         data = json.loads(raw)
-    except ValueError as exc:
+    except (ValueError, RecursionError) as exc:
         return default_settings(), f"{path}: JSON inválido ({exc})"
     if not isinstance(data, dict):
         return default_settings(), f"{path}: formato inválido"
@@ -243,7 +281,7 @@ def write_atomic(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     try:
-        with os.fdopen(fd, "w") as handle:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())

@@ -150,3 +150,56 @@ def test_count_changes_counts_leaves():
     b["monitors"][0]["scale"] = 1.5
     b["window_rules"].append({"name": "x", "match": {"class": "x"}, "float": True})
     assert store.count_changes(a, b) == 3
+
+
+def test_load_non_utf8_file_is_read_only_error(config_home):
+    path = store.settings_path()
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b'{"version": 1, "apps": "\xff\xfe"}')
+    settings, error = store.load()
+    assert "UTF-8" in error
+    assert settings == store.default_settings()
+
+
+def test_load_null_section_names_the_field(config_home):
+    path = store.settings_path()
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"version": 1, "input": None}))
+    settings, error = store.load()
+    assert "entrada" in error
+    assert settings["input"] is None
+
+
+def test_validate_bind_that_is_a_string_is_an_error():
+    s = valid()
+    s["binds"] = ["SUPER + M"]
+    assert any("atalho 1: esperado objeto" in e for e in store.validate(s))
+
+
+def test_window_rule_match_that_is_a_string_is_an_error():
+    s = valid()
+    s["window_rules"] = [{"name": "x", "match": "x", "float": True}]
+    assert any("match" in e and "esperado objeto" in e for e in store.validate(s))
+
+
+@pytest.mark.parametrize("mutate", [
+    lambda s: s.update(input=None),
+    lambda s: s.update(monitors=None),
+    lambda s: s.update(monitors=["eDP-1"]),
+    lambda s: s.update(binds="SUPER + M"),
+    lambda s: s.update(binds=["SUPER + M"]),
+    lambda s: s["binds"].append({"key": "SUPER + Q", "action": "exec"}),
+    lambda s: s["binds"].append({"key": "SUPER + Q", "action": {"type": "dispatch", "name": ["close"]}}),
+    lambda s: s["binds"].append({"key": "SUPER + Q", "action": {"type": "dispatch", "name": "workspace", "args": "1"}}),
+    lambda s: s.update(window_rules=["x"]),
+    lambda s: s.update(layer_rules=[{"name": ["blur"], "match": {"namespace": "x"}}]),
+    lambda s: s.update(layer_rules=[{"name": "blur", "match": "x", "blur": True}]),
+    lambda s: s.update(apps={"editor": "x"}),
+    lambda s: s.update(apps=None),
+    lambda s: s["appearance"].update(blur="on"),
+])
+def test_validate_never_raises_on_wrong_shapes(mutate):
+    s = valid()
+    mutate(s)
+    errors = store.validate(s)
+    assert errors and all(isinstance(e, str) for e in errors)
