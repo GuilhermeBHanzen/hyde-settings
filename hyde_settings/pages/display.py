@@ -58,7 +58,7 @@ class DisplayPage(Page):
             if entry["output"] == mon["name"]:
                 return entry
         entry = {"output": mon["name"], "mode": _live_mode(mon),
-                 "position": f"{mon['x']}x{mon['y']}", "scale": float(mon["scale"])}
+                 "position": "auto", "scale": float(mon["scale"])}
         self.app.pending["monitors"].append(entry)
         return entry
 
@@ -94,7 +94,8 @@ class DisplayPage(Page):
         scale_row.connect("notify::value", lambda r, _p: self._set_monitor(mon, "scale", round(r.get_value(), 2)))
         position_row = Adw.EntryRow(title="Posição (auto ou XxY)",
                                     text=saved["position"] if saved else "auto")
-        position_row.connect("changed", lambda r: self._set_monitor(mon, "position", r.get_text().strip()))
+        position_row.connect("changed",
+                             lambda r: self._set_monitor(mon, "position", r.get_text().strip() or "auto"))
         for row in (mode_row, scale_row, position_row):
             group.add(row)
         return group
