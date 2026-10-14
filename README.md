@@ -43,7 +43,7 @@ Hand-written files under `~/.config/hypr/` keep working. Settings made in the ap
 ## Install
 
 ```sh
-git clone https://github.com/gladiusdei/hyde-settings
+git clone https://github.com/GuilhermeBHanzen/hyde-settings
 cd hyde-settings
 ./install.sh
 ```
