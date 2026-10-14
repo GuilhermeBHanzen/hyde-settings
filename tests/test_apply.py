@@ -129,6 +129,46 @@ def test_is_dangerous():
     assert apply.is_dangerous(base, other)
 
 
+def _dangerous_pair():
+    saved = store.default_settings()
+    saved["monitors"] = [{"output": "eDP-1", "mode": "preferred", "position": "auto", "scale": 1.0}]
+    saved["input"].update(kb_layout="br", kb_variant="abnt2")
+    pending = copy.deepcopy(saved)
+    pending["monitors"] = [{"output": "eDP-1", "mode": "preferred", "position": "auto", "scale": 1.25}]
+    pending["input"].update(kb_layout="us", kb_variant="intl", sensitivity=0.5)
+    return saved, pending
+
+
+def test_discard_dangerous_takes_dangerous_fields_from_saved():
+    saved, pending = _dangerous_pair()
+    result = apply.discard_dangerous(saved, pending)
+    assert result["monitors"] == saved["monitors"]
+    assert result["input"]["kb_layout"] == "br"
+    assert result["input"]["kb_variant"] == "abnt2"
+
+
+def test_discard_dangerous_keeps_non_dangerous_pending_fields():
+    saved, pending = _dangerous_pair()
+    result = apply.discard_dangerous(saved, pending)
+    assert result["input"]["sensitivity"] == 0.5
+
+
+def test_discard_dangerous_does_not_mutate_inputs():
+    saved, pending = _dangerous_pair()
+    saved_before, pending_before = copy.deepcopy(saved), copy.deepcopy(pending)
+    result = apply.discard_dangerous(saved, pending)
+    assert saved == saved_before
+    assert pending == pending_before
+    assert result["monitors"] is not saved["monitors"]
+    assert result["input"] is not pending["input"]
+
+
+def test_discard_dangerous_result_is_not_dangerous():
+    saved, pending = _dangerous_pair()
+    assert apply.is_dangerous(saved, pending)
+    assert not apply.is_dangerous(saved, apply.discard_dangerous(saved, pending))
+
+
 def test_dangerous_apply_starts_watchdog_and_waits(fake_runner, paths):
     applier, runner = make(fake_runner, FakeHypr(), paths)
     result = applier.apply(store.default_settings(), pending_with(kb_layout="us"))

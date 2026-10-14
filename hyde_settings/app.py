@@ -9,7 +9,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib  # noqa: E402
 
 from hyde_settings import hook, store  # noqa: E402
-from hyde_settings.apply import Applier  # noqa: E402
+from hyde_settings.apply import Applier, discard_dangerous  # noqa: E402
 from hyde_settings.hypr import Hypr  # noqa: E402
 from hyde_settings.window import MainWindow  # noqa: E402
 
@@ -109,7 +109,9 @@ class HydeSettings(Adw.Application):
 
     def _revert(self):
         err = self.applier.revert()
+        self.pending = discard_dangerous(self.saved, self.pending)
         self.refresh()
+        self.changed()
         self.window.toast(f"Erro ao reverter: {err}" if err else "Configurações revertidas")
 
     def _committed(self, message):

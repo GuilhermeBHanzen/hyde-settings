@@ -3,6 +3,7 @@
 Dangerous changes (monitors, keyboard layout) start a detached watchdog that restores the
 previous ui.lua after REVERT_SECONDS unless the user confirms; it survives the app dying.
 """
+import copy
 import tempfile
 import time
 from dataclasses import dataclass
@@ -36,6 +37,15 @@ def is_dangerous(saved, pending):
         or saved["input"].get("kb_layout") != pending["input"].get("kb_layout")
         or saved["input"].get("kb_variant") != pending["input"].get("kb_variant")
     )
+
+
+def discard_dangerous(saved, pending):
+    """Copy of pending with the dangerous fields (monitors, keyboard layout and variant) taken from saved."""
+    out = copy.deepcopy(pending)
+    out["monitors"] = copy.deepcopy(saved["monitors"])
+    out["input"]["kb_layout"] = saved["input"].get("kb_layout")
+    out["input"]["kb_variant"] = saved["input"].get("kb_variant")
+    return out
 
 
 @dataclass
