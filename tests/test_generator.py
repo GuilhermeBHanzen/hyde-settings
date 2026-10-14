@@ -91,12 +91,27 @@ def test_window_and_layer_rules():
     ]
     s["layer_rules"] = [{"name": "blur", "match": {"namespace": "^(rofi)$"}, "blur": True, "ignore_alpha": 0}]
     text = generator.generate(s)
-    assert 'hl.window_rule({ name = "hs-kitty", match = { class = "^(kitty)$" }, opacity = "0.9 0.8 1.0" })\n' in text
+    assert (
+        'hl.window_rule({ name = "hs-kitty", match = { class = "^(kitty)$" }, '
+        'opacity = "0.9 override 0.8 override 1.0 override" })\n'
+    ) in text
     assert (
         'hl.window_rule({ name = "hs-mpv", match = { class = "^(mpv)$", fullscreen = true }, '
         'float = true, idle_inhibit = "always" })\n'
     ) in text
     assert 'hl.layer_rule({ name = "hs-blur", match = { namespace = "^(rofi)$" }, blur = true, ignore_alpha = 0 })\n' in text
+
+
+def test_two_value_opacity_is_absolute_too():
+    s = store.default_settings()
+    s["window_rules"] = [
+        {"name": "foot", "match": {"class": "^(foot)$"}, "opacity": [0.9, 0.8], "float": None, "idle_inhibit": None},
+    ]
+    text = generator.generate(s)
+    assert (
+        'hl.window_rule({ name = "hs-foot", match = { class = "^(foot)$" }, '
+        'opacity = "0.9 override 0.8 override" })\n'
+    ) in text
 
 
 def test_empty_match_fields_are_not_emitted():

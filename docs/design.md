@@ -123,7 +123,7 @@ The file is `~/.config/hyde-settings/settings.json`. A `null` value means "not o
   - `dispatch`, with a `name` from the curated list (5.2) and optional `args`;
   - `unbind`, which removes HyDE's or a manual bind without replacing it.
 - **`apps.<role>.command`**: `null` keeps HyDE's launcher bind. A string replaces the bind on `apps.<role>.key`.
-- **`window_rules[].match`** takes `class`, `title` or `initial_title` regexes. **`opacity`** is `[active, inactive]` or `[active, inactive, fullscreen]`. **`float`** is a bool or null. **`idle_inhibit`** is `"always"`, `"fullscreen"` or null. For `"fullscreen"`, the generator adds `fullscreen = true` to the match and emits `idle_inhibit = "always"`.
+- **`window_rules[].match`** takes `class`, `title` or `initial_title` regexes. **`opacity`** is `[active, inactive]` or `[active, inactive, fullscreen]`. Values are absolute: the generator emits `override` after each, so they are not multiplied by the global active/inactive opacity. **`float`** is a bool or null. **`idle_inhibit`** is `"always"`, `"fullscreen"` or null. For `"fullscreen"`, the generator adds `fullscreen = true` to the match and emits `idle_inhibit = "always"`.
 - **`layer_rules`** exists so the layer blur from `legacy.lua` can be migrated too. In v1 the UI shows layer rules read-only.
 
 ### 5.2 Curated dispatchers (v1)

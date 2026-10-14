@@ -157,7 +157,7 @@ def _window_rules_section(rules):
         table = {
             "name": RULE_PREFIX + rule["name"],
             "match": match,
-            "opacity": " ".join(lua_num(x) for x in opacity) if opacity else None,
+            "opacity": " ".join(f"{lua_num(x)} override" for x in opacity) if opacity else None,
             "float": rule.get("float"),
             "idle_inhibit": "always" if idle else None,
         }
