@@ -161,7 +161,7 @@ hl.config({ input = { kb_layout = "br", sensitivity = 0.7, numlock_by_default = 
 hl.unbind("SUPER + C")
 hl.bind("SUPER + C", hl.dsp.exec_cmd("code"), { description = "[Launcher|Apps] text editor" })
 
-hl.window_rule({ name = "hs-kitty", match = { class = "^(kitty)$" }, opacity = "0.90 0.80 1.0" })
+hl.window_rule({ name = "hs-kitty", match = { class = "^(kitty)$" }, opacity = "0.90 override 0.80 override 1.0 override" })
 ```
 
 Generator rules:
