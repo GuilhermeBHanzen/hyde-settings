@@ -103,16 +103,20 @@ class HydeSettings(Adw.Application):
         err = self.applier.keep(self.pending)
         if err:
             self.window.error("Não foi possível manter", err)
-            self.refresh()
+            self._drop_unconfirmed()
             return
         self._committed("Configurações mantidas")
 
     def _revert(self):
         err = self.applier.revert()
+        self._drop_unconfirmed()
+        self.window.toast(f"Erro ao reverter: {err}" if err else "Configurações revertidas")
+
+    def _drop_unconfirmed(self):
+        """The watchdog or revert put ui.lua back to saved; drop the reverted dangerous fields from pending."""
         self.pending = discard_dangerous(self.saved, self.pending)
         self.refresh()
         self.changed()
-        self.window.toast(f"Erro ao reverter: {err}" if err else "Configurações revertidas")
 
     def _committed(self, message):
         self.saved = copy.deepcopy(self.pending)
